@@ -87,3 +87,19 @@ def test_similar_neigh_distrib(data: pd.DataFrame, ref_data: pd.DataFrame, kl_th
 ########################################################
 # Implement here test_row_count and test_price_range   #
 ########################################################
+def test_row_count(data: pd.DataFrame) -> None:
+    """Test if the cleaned dataset has the expected number of rows.
+    
+    Args:
+        data: Input DataFrame to test
+    """
+    assert len(data) == 19001
+
+
+def test_price_range(data: pd.DataFrame) -> None:
+    """Test if all prices are within the expected cleaned range.
+    
+    Args:
+        data: Input DataFrame to test
+    """
+    assert data["price"].between(10, 350).all()
