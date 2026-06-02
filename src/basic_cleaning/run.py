@@ -37,6 +37,7 @@ def go(args):
 
     df = df[idx].copy()
 
+    print(len(df))
     # Save the cleaned data
     df.to_csv('clean_sample.csv',index=False)
 
