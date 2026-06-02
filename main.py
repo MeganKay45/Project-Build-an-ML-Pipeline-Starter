@@ -50,25 +50,24 @@ def go(config: DictConfig):
             )
 
         if "basic_cleaning" in active_steps:
-           _ = mlflow.run(
-               os.path.join(hydra.utils.get_original_cwd(),
-                            "src", "basic_cleaning"),
-               "main",
-               parameters={
-                   "input_artifact": "sample.csv:latest",
-                   "output_artifact": "clean_sample.csv",
-                   "output_type": "clean_sample",
-                   "output_description": "Data with outliers removed and last_review converted to datetime",
-                   "min_price": config["etl"]["min_price"],
-                   "max_price": config["etl"]["max_price"],
-               },
-           )
+             _ = mlflow.run(
+                f"{config['main']['components_repository']}/basic_cleaning",
+                "main",
+                parameters={
+                    "input_artifact": "sample.csv:latest",
+                    "output_artifact": "clean_sample.csv",
+                    "output_type": "clean_sample",
+                    "output_description": "Data with outliers removed and last_review converted to datetime",
+                    "min_price": config["etl"]["min_price"],
+                    "max_price": config["etl"]["max_price"],
+                },
+            )
 
         if "data_check" in active_steps:
             _ = mlflow.run(
-                os.path.join(hydra.utils.get_original_cwd(),
-                             "src", "data_check"),
+                f"{config['main']['components_repository']}/data_check",
                 "main",
+                env_manager="conda",
                 parameters={
                     "csv": "clean_sample.csv:latest",
                     "ref": "clean_sample.csv:reference",
@@ -91,19 +90,14 @@ def go(config: DictConfig):
             )
 
         if "train_random_forest" in active_steps:
-
-            # NOTE: we need to serialize the random forest configuration into JSON
             rf_config = os.path.abspath("rf_config.json")
             with open(rf_config, "w+") as fp:
-                json.dump(dict(config["modeling"]["random_forest"].items()), fp)  # DO NOT TOUCH
+                json.dump(dict(config["modeling"]["random_forest"].items()), fp)
 
-
-            # NOTE: use the rf_config we just created as the rf_config parameter for the train_random_forest
-            # step
             _ = mlflow.run(
-                os.path.join(hydra.utils.get_original_cwd(),
-                             "src", "train_random_forest"),
+                f"{config['main']['components_repository']}/train_random_forest",
                 "main",
+                env_manager="conda",
                 parameters={
                     "trainval_artifact": "trainval_data.csv:latest",
                     "output_artifact": "random_forest_export",
@@ -114,6 +108,7 @@ def go(config: DictConfig):
                     "max_tfidf_features": config["modeling"]["max_tfidf_features"],
                 },
             )
+
 
         if "test_regression_model" in active_steps:
             _ = mlflow.run(
