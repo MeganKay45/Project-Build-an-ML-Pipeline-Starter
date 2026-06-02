@@ -16,11 +16,12 @@ _steps = [
     # NOTE: We do not include this in the steps so it is not run by mistake.
     # You first need to promote a model export to "prod" before you can run this,
     # then you need to run this step explicitly
-#    "test_regression_model"
+    #    "test_regression_model"
 ]
 
-
 # This automatically reads in the configuration
+
+
 @hydra.main(version_base=None, config_name='config', config_path='.')
 def go(config: DictConfig):
 
@@ -32,19 +33,18 @@ def go(config: DictConfig):
     steps_par = config['main']['steps']
     active_steps = steps_par.split(",") if steps_par != "all" else _steps
 
-    raw_artifact = os.path.basename(config)["etl"]["sample"]
-    clean_artifact = f"clean_{raw_artifact}"
     # Move to a temporary directory
     with tempfile.TemporaryDirectory() as tmp_dir:
 
         if "download" in active_steps:
+            # Download file and load in W&B
             _ = mlflow.run(
                 f"{config['main']['components_repository']}/get_data",
                 "main",
                 env_manager="conda",
                 parameters={
                     "sample": config["etl"]["sample"],
-                    "artifact_name": raw_artifact,
+                    "artifact_name": "sample.csv",
                     "artifact_type": "raw_data",
                     "artifact_description": "Raw file as downloaded"
                 },
@@ -57,8 +57,8 @@ def go(config: DictConfig):
                 "main",
                 env_manager="conda",
                 parameters={
-                    "input_artifact": f"{raw_artifact}:latest",
-                    "output_artifact": clean_artifact,
+                    "input_artifact": "sample.csv:latest",
+                    "output_artifact": "clean_sample.csv",
                     "output_type": "clean_sample",
                     "output_description": "Data with outliers removed and last_review converted to datetime",
                     "min_price": config["etl"]["min_price"],
@@ -73,7 +73,7 @@ def go(config: DictConfig):
                 "main",
                 env_manager="conda",
                 parameters={
-                    "csv": f"{clean_artifact}:latest",
+                    "csv": "clean_sample.csv:latest",
                     "ref": "clean_sample.csv:reference",
                     "kl_threshold": config["data_check"]["kl_threshold"],
                     "min_price": config["etl"]["min_price"],
@@ -86,22 +86,22 @@ def go(config: DictConfig):
                 f"{config['main']['components_repository']}/train_val_test_split",
                 "main",
                 parameters={
-                    "input": f"{clean_artifact}:latest",
+                    "input": "clean_sample.csv:latest",
                     "test_size": config["modeling"]["test_size"],
                     "random_seed": config["modeling"]["random_seed"],
                     "stratify_by": config["modeling"]["stratify_by"],
                 },
             )
 
-
         if "train_random_forest" in active_steps:
             rf_config = os.path.abspath("rf_config.json")
             with open(rf_config, "w+") as fp:
-                json.dump(dict(config["modeling"]["random_forest"].items()), fp)
+                json.dump(
+                    dict(config["modeling"]["random_forest"].items()), fp)
 
             _ = mlflow.run(
                 os.path.join(hydra.utils.get_original_cwd(),
-                            "src", "train_random_forest"),
+                             "src", "train_random_forest"),
                 "main",
                 env_manager="conda",
                 parameters={
@@ -115,9 +115,6 @@ def go(config: DictConfig):
                 },
             )
 
-
-
-
         if "test_regression_model" in active_steps:
             _ = mlflow.run(
                 f"{config['main']['components_repository']}/test_regression_model",
@@ -127,6 +124,7 @@ def go(config: DictConfig):
                     "test_dataset": "test_data.csv:latest",
                 },
             )
-        
+
+
 if __name__ == "__main__":
     go()
