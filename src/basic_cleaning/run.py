@@ -34,7 +34,6 @@ def go(args):
     # Only implement this step when reaching Step 6: Pipeline Release and Updates
     # in the project.
     idx = df['longitude'].between(-74.25, -73.50) & df['latitude'].between(40.5, 41.2)
-    idx = df["minimum_nights"] <= 365
     df = df[idx].copy()
 
     print(len(df))
