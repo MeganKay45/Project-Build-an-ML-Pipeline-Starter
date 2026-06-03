@@ -179,3 +179,5 @@ Please, make sure all steps are using **the same** python version and that you h
 ## License
 
 [License](LICENSE.txt)
+
+link to public github: https://github.com/MeganKay45/Project-Build-an-ML-Pipeline-Starter
